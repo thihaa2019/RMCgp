@@ -2,10 +2,10 @@
     [<a href="https://arxiv.org/">arXiv</a>] </h1>
 
 <p align="center">
-<img align="middle" src="./imgs/L1vL2trajectory.png" width="666" />
+<img align="middle" src="imgs/L1vL2trajectory.png" width="666" />
 </p>
 
-Building on the well-understood mathematical theory of _stochstic optimal control_, we solve renewable energy contrl problems using RMC that involves:
+Building on the well-understood mathematical theory of _stochstic optimal control_, we solve renewable energy control problems using RMC that involves:
 + Dynamic Programming
 + Policy and Value emulators
 + Demonstrate state-of-the-art performance.
@@ -57,7 +57,7 @@ hybrid_solution.solve()
 ```
 
 <p align="center">
-<img align="middle" src="./imgs/HybridScheme.png" width="666" />
+<img align="middle" src="imgs/HybridScheme.png" width="666" />
 </p>
 
 ### Reproducing experiments
