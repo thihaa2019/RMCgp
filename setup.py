@@ -13,7 +13,8 @@ install_requirements = [
     "cython>=0.29",
     "GPy>=1.13.0",
     "scikit-learn>=1.3.0",
-    "scipy>=1.1.4"
+    "scipy>=1.1.4",
+    "matplotlib>=3.8.0"
 ]
 
 setuptools.setup(name='RMCgp',
