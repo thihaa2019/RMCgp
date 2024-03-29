@@ -4,7 +4,7 @@ import setuptools
 
 here = pathlib.Path(__file__).resolve().parent
 
-with open(here / 'RMC/README.md', 'r') as f:
+with open(here / 'README.md', 'r') as f:
     readme = f.read()
 install_requirements = [
     "numpy>=1.7",
