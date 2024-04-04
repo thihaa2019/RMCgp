@@ -4,7 +4,7 @@ import setuptools
 
 here = pathlib.Path(__file__).resolve().parent
 
-with open(here / 'README.md', 'r') as f:
+with open(here / 'RMC/README.md', 'r') as f:
     readme = f.read()
 install_requirements = [
     "numpy>=1.7",
@@ -18,14 +18,14 @@ install_requirements = [
 ]
 
 setuptools.setup(name='RMCgp',
-                 version='0.0.11',
+                 version='0.0.12',
                  author='Thiha Aung',
                  author_email='taung@ucsb.edu',
                  maintainer='Thiha Aung',
-                 maintainer_email='taungu@ucsb.edu',
+                 maintainer_email='taung@ucsb.edu',
                  description='RMC for stochastic control.',
                  long_description=readme,
-                 url='https://github.com/thihaa2019/RMC',
+                 url='https://github.com/thihaa2019/RMCgp',
                  license='Apache-2.0',
                  zip_safe=False,
                  python_requires='>=3.9',

@@ -70,7 +70,7 @@ class Sim():
         dW = np.random.normal(0,1,size = nsim) * np.sqrt(self.dt)
         X_next = np.abs(X_start +self.drift(drift_p1,drift_p2,X_start) * self.dt +\
                             self.diffusion(vol_p1,vol_p2,X_start)* dW)
-        return X_next
+        return X_next.flatten()
     def cor(self,i,j):
         if i <=0 or i >= self.nstep+1:
             raise ValueError("Invalid index for i.")

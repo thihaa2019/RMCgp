@@ -22,10 +22,10 @@ class final_SOCcontraint():
         self._charging_eff = efficiency
 
     def cost(self,I):
-        return self.scale*np.maximum(self.Imax*self.constraint_level- I,0)
+        return self.scale*np.maximum(self._Imax*self.constraint_level- I,0)
     
     def derivative(self,I,B):
         # assume I follows I_prev + eta B( B>0) dt + 1/eta B(B<0 ) dt
-        dg_dB = -self.scale * (I< self.Imax*self.constraint_level ) * \
-            (self.charging_eff * (B>0) + 1/self.charging_eff * (B<0))
+        dg_dB = -self.scale * (I< self._Imax*self.constraint_level ) * \
+            (self._charging_eff * (B>0) + 1/self._charging_eff * (B<0))
         return dg_dB
