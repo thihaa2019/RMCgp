@@ -7,7 +7,7 @@ class Sim():
     
     
     """
-    def __init__(self,X0,nstep,nsim,maturity,drift_parameters,drift_function,diffusion_parameters,diffusion_function,UB,LB,noises):
+    def __init__(self,X0,nstep,nsim,maturity,drift_parameters,drift_function,diffusion_parameters,diffusion_function):
 
         if isinstance(X0,(list,np.ndarray)):
             assert len(X0)==nsim, "X0 and nsim must have same size"
@@ -19,20 +19,10 @@ class Sim():
         self.nstep    = nstep
         self.dt = maturity/nstep
         self.t = np.linspace(0,maturity,nstep+1)
-        self.UB = UB
-        self.LB = LB
-        # noises must be shape nsimxnstep columns
-
         if nsim==None:
             self.nsim = 10000
         else:
             self.nsim = nsim
-
-        # Standard mean 0 var 1 nosies
-
-        self.noises = noises
-        if self.noises is None:
-            self.noises = np.random.normal(0,1,size = (self.nsim,self.nstep))
 
         self.drift = drift_function
         assert isinstance(drift_parameters[0],(np.ndarray,list)) and isinstance(drift_parameters[1],(np.ndarray,list)),\
@@ -56,16 +46,18 @@ class Sim():
 
         self.sim_trajectories = self.simulate()
     
-    def simulate(self):
+    def simulate(self,BM = None,given_BM = False):
         self.Xs = np.zeros((self.nsim,self.nstep+1))
         self.Xs[:,0] = np.ones(self.nsim)* self.X0
-        #normal (0,1) 
-        dW = self.noises
+
+        if not given_BM:
+            dW = np.random.normal(0,1,size = (self.nsim,self.nstep) ) * np.sqrt(self.dt)
+        else:
+            dW = BM
+
         for i in range(1,self.nstep+1):
             self.Xs[:,i] = np.abs(self.Xs[:,i-1] +self.drift(self.drift_p1[i-1],self.drift_p2[i-1],self.Xs[:,i-1]) * self.dt +\
-                            self.diffusion(self.diffusion_p1[i-1],self.diffusion_p2[i-1],self.Xs[:,i-1])* dW[:,i-1] * np.sqrt(self.dt))
-            self.Xs[:,i] = np.minimum(self.Xs[:,i],self.UB)
-            self.Xs[:,i] = np.maximum(self.Xs[:,i],self.LB)
+                            self.diffusion(self.diffusion_p1[i-1],self.diffusion_p2[i-1],self.Xs[:,i-1])* dW[:,i-1])
         return self.Xs
     @property
     def mean_vec(self):
@@ -74,14 +66,10 @@ class Sim():
     def std_vec(self):
         return np.std(self.sim_trajectories,axis= 0, ddof = 1)
 
-    def onestepsimulate(self,nsim,X_start,drift_p1,drift_p2,vol_p1,vol_p2,step_num):
-        # boostrap the noises accordingly
-        dW = np.random.choice(self.noises[step_num,:],size=nsim, replace = True)
+    def onestepsimulate(self,nsim,X_start,drift_p1,drift_p2,vol_p1,vol_p2):
+        dW = np.random.normal(0,1,size = nsim) * np.sqrt(self.dt)
         X_next = np.abs(X_start +self.drift(drift_p1,drift_p2,X_start) * self.dt +\
-                            self.diffusion(vol_p1,vol_p2,X_start)* dW * np.sqrt(self.dt))
-        
-        X_next = np.minimum(X_next,self.UB)
-        X_next = np.maximum(X_next,self.LB)
+                            self.diffusion(vol_p1,vol_p2,X_start)* dW)
         return X_next.flatten()
     def cor(self,i,j):
         if i <=0 or i >= self.nstep+1:

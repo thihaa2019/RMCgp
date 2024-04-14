@@ -102,7 +102,7 @@ class runRMC():
         return value_map
     
     def v_evaluation(self,X_prev,drift_p1,drift_p2,vol_p1,vol_p2,I_next,policy_map,value_map,*args):
-        target,lower_target,upper_target,step = args
+        target,lower_target,upper_target = args
         assert isinstance(target,(int,float)), "One step target is a scalar"
         reshape_dim = 1 # no reshaping
         X_prev_rep = X_prev
@@ -112,19 +112,15 @@ class runRMC():
             X_prev_rep= np.repeat(X_prev,self.batch_size)
             I_next_rep= np.repeat(I_next,self.batch_size)
 
-        X_next_rep= self.process.onestepsimulate(int(self.nsim*reshape_dim),X_prev_rep,drift_p1,drift_p2,vol_p1,vol_p2,step)
+        X_next_rep= self.process.onestepsimulate(int(self.nsim*reshape_dim),X_prev_rep,drift_p1,drift_p2,vol_p1,vol_p2)
         power_outputs = policy_map.predict(np.column_stack((X_next_rep,I_next_rep)))[0].flatten()
         LB = np.maximum(self.Bmin,self.charging_eff*(self.Ilb- I_next_rep)/self.dt)
         UB = np.minimum(self.Bmax,(self.Iub-I_next_rep)/(self.charging_eff*self.dt))
+
         pos_outputs = np.where(power_outputs>0)
-        # When X> M , cap B>0 by X-B, do not charge more and make Ot< Mt, when Ot guaranteed > M given X
+        # cannot charge more than X is available
         upper_charging_bound  = np.maximum(X_next_rep[pos_outputs]-target,0)
         power_outputs[pos_outputs] = np.minimum(power_outputs[pos_outputs],upper_charging_bound)
-
-        # DO NOT CHARGE WHEN X < M, otherwise Ot= X-B < X< M
-        # Dont make undersupply worse
-        idx = (X_next_rep < target ) & (power_outputs>0)
-        power_outputs[idx]=0
         power_outputs = np.maximum(LB,np.minimum(power_outputs,UB))
         I_nextnext = I_next_rep + power_outputs *(self.charging_eff *(power_outputs>0) + 1/self.charging_eff * (power_outputs<0))*self.dt
         if isinstance(value_map,final_SOCcontraint):
@@ -146,14 +142,14 @@ class runRMC():
         self.values[-1] = self.final_cost 
         X_prev,I_next = design_generator(self.nsim,self.X_lowers[-3],self.X_uppers[-3],self.Ilb,self.Iub).create_samples
         X_next = self.process.onestepsimulate(self.nsim,X_prev,self.process.drift_p1[-2],self.process.drift_p2[-2],\
-                                              self.process.diffusion_p1[-2],self.process.diffusion_p2[-2],-2)
+                                              self.process.diffusion_p1[-2],self.process.diffusion_p2[-2])
         self.policies[-1] = self.train_policy(X_next,I_next,self.values[-1],self.targets[-1],self.lower_targets[-1],self.upper_targets[-1])
 
         
         pointwise_values = self.v_evaluation(X_prev,self.process.drift_p1[-2],self.process.drift_p2[-2],\
                                              self.process.diffusion_p1[-2],self.process.diffusion_p2[-2],\
                                              I_next,self.policies[-1],self.values[-1],\
-                                                self.targets[-1],self.lower_targets[-1],self.upper_targets[-1],-2)
+                                                self.targets[-1],self.lower_targets[-1],self.upper_targets[-1])
         
         for iStep in range(self.nstep-1,0,-1):
             self.values[iStep-1] = self.train_value(X_prev,I_next,pointwise_values)
@@ -165,7 +161,7 @@ class runRMC():
             if iStep!=1:
                 X_prev,I_next = design_generator(self.nsim,self.X_lowers[iStep-2],self.X_uppers[iStep-2],self.Ilb,self.Iub).create_samples
                 X_next = self.process.onestepsimulate(self.nsim,X_prev,self.process.drift_p1[iStep-2],self.process.drift_p2[iStep-2],\
-                                                self.process.diffusion_p1[iStep-2],self.process.diffusion_p2[iStep-2],iStep-2)
+                                                self.process.diffusion_p1[iStep-2],self.process.diffusion_p2[iStep-2])
 
                 self.policies[iStep-1] = self.train_policy(X_next,I_next,self.values[iStep-1],self.targets[iStep-1],self.lower_targets[iStep-1],self.upper_targets[iStep-1])
 
@@ -173,7 +169,7 @@ class runRMC():
                 pointwise_values = self.v_evaluation(X_prev,self.process.drift_p1[iStep-2],self.process.drift_p2[iStep-2],\
                                              self.process.diffusion_p1[iStep-2],self.process.diffusion_p2[iStep-2],\
                                              I_next,self.policies[iStep-1],self.values[iStep-1],\
-                                            self.targets[iStep-1],self.lower_targets[iStep-1],self.upper_targets[iStep-1],iStep-2)
+                                            self.targets[iStep-1],self.lower_targets[iStep-1],self.upper_targets[iStep-1])
         
             else:
                 X_0,I_0 = design_generator(self.nsim,self.X_lowers[0],self.X_uppers[0],self.Ilb,self.Iub).create_samples

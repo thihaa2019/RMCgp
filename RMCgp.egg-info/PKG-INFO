@@ -1,0 +1,27 @@
+Metadata-Version: 2.1
+Name: RMCgp
+Version: 0.0.13
+Summary: RMC for stochastic control.
+Home-page: https://github.com/thihaa2019/RMCgp
+Author: Thiha Aung
+Author-email: taung@ucsb.edu
+Maintainer: Thiha Aung
+Maintainer-email: taung@ucsb.edu
+License: Apache-2.0
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: Apache Software License
+Requires-Python: >=3.9
+License-File: LICENSE.txt
+Requires-Dist: numpy>=1.7
+Requires-Dist: six
+Requires-Dist: paramz>=0.9.6
+Requires-Dist: cython>=0.29
+Requires-Dist: GPy>=1.13.0
+Requires-Dist: scikit-learn>=1.3.0
+Requires-Dist: scipy>=1.1.4
+Requires-Dist: matplotlib>=3.8.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: twine>=4.0.2; extra == "dev"
+
+Refer to [GitHub](https://github.com/thihaa2019/RMCgp) 
