@@ -1,1 +1,0 @@
-from .GP import valueGP, policyGP
