@@ -18,7 +18,7 @@ install_requirements = [
 ]
 
 setuptools.setup(name='RMCgp',
-                 version='0.0.13',
+                 version='0.0.15',
                  author='Thiha Aung',
                  author_email='taung@ucsb.edu',
                  maintainer='Thiha Aung',

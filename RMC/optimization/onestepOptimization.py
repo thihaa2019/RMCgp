@@ -40,7 +40,14 @@ class onestepOptimizer():
     def optimize(self,X,I,q,*remainingargs):
         target = remainingargs[0]
         starter = X- target
-
+        # excess gen imply charge only >0
+        if starter >0:
+            B_bnds = [(0,None)]
+        # under gen imply discharge only <0
+        elif starter<0:
+            B_bnds = [(None,0)]
+        else:
+            B_bnds = None
         opt_B = scipy.optimize.minimize(self.cost_togo, jac= self.cost_togo_derivative,x0=starter, \
                                        args=(X,I,q,*remainingargs),method = "L-BFGS-B",bounds=None)
         return opt_B.x[0]
