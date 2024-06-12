@@ -56,11 +56,16 @@ class Sim():
 
         self.sim_trajectories = self.simulate()
     
-    def simulate(self):
+    def simulate(self,new_sim = False):
         self.Xs = np.zeros((self.nsim,self.nstep+1))
         self.Xs[:,0] = np.ones(self.nsim)* self.X0
-        #normal (0,1) 
-        dW = self.noises
+        if not new_sim:
+
+            dW = self.noises
+        else:
+
+            dW = np.random.normal(0,1,size = (self.nsim,self.nstep))
+
         for i in range(1,self.nstep+1):
             self.Xs[:,i] = np.abs(self.Xs[:,i-1] +self.drift(self.drift_p1[i-1],self.drift_p2[i-1],self.Xs[:,i-1]) * self.dt +\
                             self.diffusion(self.diffusion_p1[i-1],self.diffusion_p2[i-1],self.Xs[:,i-1])* dW[:,i-1] * np.sqrt(self.dt))

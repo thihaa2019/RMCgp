@@ -1,4 +1,4 @@
-from ..costfunctions.finalCosts import final_SOCcontraint
+from ..costfunctions.finalCosts import final_SOCcontraint,quadratic_SoC_constraint
 import scipy
 import GPy
 import numpy as np
@@ -15,7 +15,7 @@ class onestepOptimizer():
         assert isinstance(B,(list,np.ndarray)), "B must be array of length 1."
         # starting here no B allowed only B[0]
         next_step = np.array([X,I +B[0]*(self.charging_eff*(B[0]>0) + 1/self.charging_eff * (B[0]<0))*self.dt])
-        if isinstance(q,final_SOCcontraint):
+        if isinstance(q,final_SOCcontraint) or isinstance(q,quadratic_SoC_constraint):
             q_val = q.cost(next_step[1])
         if isinstance(q,GPy.core.GP):
             q_val = q.predict(next_step.reshape(1,-1))[0].flatten()[0]
@@ -28,7 +28,7 @@ class onestepOptimizer():
         assert isinstance(B,(list,np.ndarray)), "B must be array of length 1."
         # starting here no B allowed only B[0]
         next_step = np.array([X,I +B[0]*(self.charging_eff*(B[0]>0) + 1/self.charging_eff * (B[0]<0))*self.dt])
-        if isinstance(q,final_SOCcontraint):
+        if isinstance(q,final_SOCcontraint) or isinstance(q,quadratic_SoC_constraint):
             q_derivative= q.derivative(next_step[1],B[0])
         if isinstance(q,GPy.core.GP):
             q_derivative = q.predictive_gradients(next_step.reshape(1,-1))[0][:,1].flatten()[0] 
@@ -41,13 +41,7 @@ class onestepOptimizer():
         target = remainingargs[0]
         starter = X- target
         # excess gen imply charge only >0
-        if starter >0:
-            B_bnds = [(0,None)]
-        # under gen imply discharge only <0
-        elif starter<0:
-            B_bnds = [(None,0)]
-        else:
-            B_bnds = None
+
         opt_B = scipy.optimize.minimize(self.cost_togo, jac= self.cost_togo_derivative,x0=starter, \
                                        args=(X,I,q,*remainingargs),method = "L-BFGS-B",bounds=None)
         return opt_B.x[0]

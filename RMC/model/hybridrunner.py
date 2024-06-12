@@ -2,7 +2,7 @@
 from ..optimization import onestepOptimizer
 from ..design import design_generator
 from .. emulator import valueGP,policyGP
-from .. costfunctions import final_SOCcontraint
+from .. costfunctions import final_SOCcontraint,quadratic_SoC_constraint
 import GPy
 import numpy as np
 import warnings
@@ -53,6 +53,8 @@ class runRMC():
 
 
         self.X_lowers,self.X_uppers = np.quantile(self.process.sim_trajectories, q =[0.005,0.995],axis = 0)
+        self.X_lowers = np.ones(len(self.X_lowers))*np.min(self.process.sim_trajectories)
+        self.X_uppers = np.ones(len(self.X_uppers))*np.max(self.process.sim_trajectories)
     def train_policy(self,X_train,I_train,value_map,*args):
         assert len(X_train)==len(I_train)
         B_train = np.zeros(len(X_train))
@@ -72,20 +74,7 @@ class runRMC():
         control_map.optimize()
 
         self.MSE_evaluation(control_output.flatten(),control_map.predict(control_input)[0].flatten(),"Policy",I_train)
-        #while MSE>=1e-1:
-            #X_lb,X_ub = np.min(X_train),np.max(X_train)
-            #X_new,I_new = design_generator(50,X_lb,X_ub,self.Ilb,self.Iub).create_samples
-            #new_control_input = np.column_stack((X_new,I_new))
-            #new_control_output = np.zeros(50)
-            #for i in range(len(new_control_output)):
-            #    new_control_output[i] = self.optimizer.optimize(X_new[i],I_new[i],value_map,*args)
-            #new_control_output = new_control_output.reshape(-1,1)
-            #control_map.set_XY(np.vstack((control_map.X, new_control_input)), np.vstack((control_map.Y, new_control_output)))
-            #control_map.optimize_restarts(num_restarts=2)
-            #control_map.optimize()
-            #MSE = self.MSE_evaluation(control_map.Y.flatten(),control_map.predict(control_map.X)[0].flatten(),\
-                                      #  "Policy",control_map.X[:,1])
-        #print(len(control_map.optimization_runs))
+
         return control_map
 
     def train_value(self,X_train,I_train,pointwisevalues):
@@ -117,20 +106,20 @@ class runRMC():
         LB = np.maximum(self.Bmin,self.charging_eff*(self.Ilb- I_next_rep)/self.dt)
         UB = np.minimum(self.Bmax,(self.Iub-I_next_rep)/(self.charging_eff*self.dt))
         # according to scipy.optimize, B>0 when X>=M
-        pos_outputs = np.where(power_outputs>0)
+        #pos_outputs = np.where(power_outputs>0)
         # do not charge more than X-M, causing O < M , ensures B<= X-M or M<=X-B
-        upper_charging_bound  = np.maximum(X_next_rep[pos_outputs]-target,0)
-        power_outputs[pos_outputs] = np.minimum(power_outputs[pos_outputs],upper_charging_bound)
+        #upper_charging_bound  = np.maximum(X_next_rep[pos_outputs]-target,0)
+       #power_outputs[pos_outputs] = np.minimum(power_outputs[pos_outputs],upper_charging_bound)
 
         # according to scipy.optimize, B<0 when X<=M
-        neg_outputs = np.where(power_outputs<0)
+        #neg_outputs = np.where(power_outputs<0)
         # do not discharge more than X-M, causing O > M , ensures B>= X-M or M>=X-B
-        lower_charging_bound  = np.minimum(X_next_rep[neg_outputs]-target,0)
-        power_outputs[neg_outputs] = np.maximum(power_outputs[neg_outputs],lower_charging_bound)
+        #lower_charging_bound  = np.minimum(X_next_rep[neg_outputs]-target,0)
+        #power_outputs[neg_outputs] = np.maximum(power_outputs[neg_outputs],lower_charging_bound)
 
         power_outputs = np.maximum(LB,np.minimum(power_outputs,UB))
         I_nextnext = I_next_rep + power_outputs *(self.charging_eff *(power_outputs>0) + 1/self.charging_eff * (power_outputs<0))*self.dt
-        if isinstance(value_map,final_SOCcontraint):
+        if isinstance(value_map,final_SOCcontraint) or isinstance(value_map,quadratic_SoC_constraint):
             pointwise_v = self.running_cost.cost(power_outputs,X_next_rep,target,lower_target,upper_target) * self.dt + value_map.cost(I_nextnext)
         if isinstance(value_map,GPy.core.GP):
             inp = np.column_stack((X_next_rep,I_nextnext))
@@ -167,6 +156,7 @@ class runRMC():
 
             if iStep!=1:
                 X_prev,I_next = design_generator(self.nsim,self.X_lowers[iStep-2],self.X_uppers[iStep-2],self.Ilb,self.Iub).create_samples
+                print(X_prev.shape)
                 X_next = self.process.onestepsimulate(self.nsim,X_prev,self.process.drift_p1[iStep-2],self.process.drift_p2[iStep-2],\
                                                 self.process.diffusion_p1[iStep-2],self.process.diffusion_p2[iStep-2],iStep-2)
 
@@ -201,16 +191,16 @@ class runRMC():
         I_vec[0] =I0
         B_vec = np.zeros(len(X_vec))
         total_cost = 0
-        for i in range(24):
+        for i in range(len(A_t)):
             cur_X =  X_vec[i]
             cur_I  = I_vec[i]
             inp_vec = np.array([cur_X,cur_I]).reshape(1,-1)
             B = self.policy_maps[i].predict(inp_vec)[0].flatten()
 
-            if B >0:
-                B= np.minimum(B,cur_X-self.targets[i])
-            if B<0:
-                B = np.maximum(cur_X-self.targets[i],B)
+            #if B >0:
+            #    B= np.minimum(B,cur_X-self.targets[i])
+            #if B<0:
+            #    B = np.maximum(cur_X-self.targets[i],B)
             LB = np.maximum(self.Bmin,self.charging_eff*(self.Ilb- cur_I)/self.dt)
             UB = np.minimum(self.Bmax,(self.Iub-cur_I)/(self.charging_eff*self.dt))
             B = np.maximum(LB,np.minimum(B,UB))
@@ -222,15 +212,14 @@ class runRMC():
         total_cost += self.final_cost.cost(I_vec[-1])
         return X_vec,I_vec,B_vec,total_cost
 
-    def monteCarlo_control(self,X0,I0,N_MC,init_sigma = None, randomize = False):
-        X_init = np.ones(N_MC)*X0
+    def monteCarlo_GPcontrol(self,X0,I0,N_MC,init_sigma = None, randomize = False,new_sim =False):
         if randomize:
             assert init_sigma>0, "Sigma must be positive"
             X_init = np.minimum(np.random.normal(X0,init_sigma,size = (N_MC) ),self.process.UB)
             X_init = np.maximum(X_init,self.process.LB)
-
+        self.process.X0 = X0
         self.process.nsim = N_MC
-        X_sims = self.process.simulate()
+        X_sims = self.process.simulate(new_sim)
         Bts = np.zeros((N_MC,self.nstep))
         Is = np.zeros((N_MC,self.nstep+1)); Is[:,0] = I0 *np.ones(N_MC)
 
@@ -242,24 +231,24 @@ class runRMC():
             inp = np.column_stack((X_sims[:,i],Is[:,i]))
             Bts[:,i] = self.policy_maps[i].predict(inp)[0].flatten()
             # according to scipy.optimize, B>0 when X>=M
-            pos_outputs = np.where(Bts[:,i] >0)
+            #pos_outputs = np.where(Bts[:,i] >0)
             # do not charge more than X-M, causing O < M , ensures B<= X-M or M<=X-B
-            upper_charging_bound  = np.maximum(X_sims[pos_outputs,i]-self.targets[i],0)
-            Bts[pos_outputs,i] = np.minimum(Bts[pos_outputs,i],upper_charging_bound)
+            #upper_charging_bound  = np.maximum(X_sims[pos_outputs,i]-self.targets[i],0)
+            #Bts[pos_outputs,i] = np.minimum(Bts[pos_outputs,i],upper_charging_bound)
 
             # according to scipy.optimize, B<0 when X<=M
-            neg_outputs = np.where(Bts[:,i] >0)
+            #neg_outputs = np.where(Bts[:,i] <0)
             # do not discharge more than X-M, causing O > M , ensures B>= X-M or M>=X-B
-            lower_charging_bound  = np.minimum(X_sims[neg_outputs,i]-self.targets[i],0)
-            Bts[neg_outputs,i]= np.maximum(Bts[neg_outputs,i],lower_charging_bound)
+            #lower_charging_bound  = np.minimum(X_sims[neg_outputs,i]-self.targets[i],0)
+            #Bts[neg_outputs,i]= np.maximum(Bts[neg_outputs,i],lower_charging_bound)
             Bts[:,i] = np.maximum(LB,np.minimum(Bts[:,i],UB))
             Is[:,i+1] = Is[:,i]+Bts[:,i]*(self.charging_eff*(Bts[:,i]>0) +1/self.charging_eff *(Bts[:,i]<0))*self.dt
             running_cost[:,i] = self.running_cost.cost(Bts[:,i],X_sims[:,i],self.targets[i],self.lower_targets[i],self.upper_targets[i])* self.dt
         total_cost = np.sum(running_cost,axis = 1) +self.final_cost.cost(Is[:,-1]).flatten()
-
         mean_total_cost = np.mean(total_cost)
 
         return X_sims,Is,Bts, mean_total_cost
+
 
     def MSE_evaluation(self,y_true,GP_output,map_type,*args):
         if map_type == "Policy":
