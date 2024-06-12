@@ -7,14 +7,15 @@ here = pathlib.Path(__file__).resolve().parent
 with open(here / 'RMC/README.md', 'r') as f:
     readme = f.read()
 install_requirements = [
-    "numpy>=1.7",
+    "numpy==1.24.3",
     "six",
-    "paramz>=0.9.6",
+    "paramz==0.9.5",
     "cython>=0.29",
-    "GPy>=1.13.0",
-    "scikit-learn>=1.3.0",
-    "scipy>=1.1.4",
-    "matplotlib>=3.8.0"
+    "GPy==1.10.0",
+    "scikit-learn==1.3.0",
+    "scipy==1.11.4",
+    "matplotlib==3.7.1",
+    "python==3.10.12"
 ]
 
 setuptools.setup(name='RMCgp',
