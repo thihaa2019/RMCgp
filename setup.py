@@ -19,7 +19,7 @@ install_requirements = [
 ]
 
 setuptools.setup(name='RMCgp',
-                 version='0.0.25',
+                 version='0.0.30',
                  author='Thiha Aung',
                  author_email='taung@ucsb.edu',
                  maintainer='Thiha Aung',
@@ -35,7 +35,7 @@ setuptools.setup(name='RMCgp',
                     "RMC",
                     "RMC.costfunctions",
                     "RMC.design",
-                    "RMC.emulator",
+                    "RMC.emulator",  
                     "RMC.model",
                     "RMC.optimization",
                     "RMC.simulate"

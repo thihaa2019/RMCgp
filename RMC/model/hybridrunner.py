@@ -120,12 +120,11 @@ class runRMC():
         power_outputs = np.maximum(LB,np.minimum(power_outputs,UB))
         I_nextnext = I_next_rep + power_outputs *(self.charging_eff *(power_outputs>0) + 1/self.charging_eff * (power_outputs<0))*self.dt
         if isinstance(value_map,final_SOCcontraint) or isinstance(value_map,quadratic_SoC_constraint):
-            pointwise_v = self.running_cost.cost(power_outputs,X_next_rep,target,lower_target,upper_target) * self.dt + value_map.cost(I_nextnext)
+            pointwise_v = self.running_cost.cost(power_outputs,X_next_rep,I_next_rep,target,lower_target,upper_target) * self.dt + value_map.cost(I_nextnext)
         if isinstance(value_map,GPy.core.GP):
             inp = np.column_stack((X_next_rep,I_nextnext))
-            pointwise_v = self.running_cost.cost(power_outputs,X_next_rep,target,lower_target,upper_target) * self.dt + value_map.predict(inp)[0].flatten()
+            pointwise_v = self.running_cost.cost(power_outputs,X_next_rep,I_next_rep,target,lower_target,upper_target) * self.dt + value_map.predict(inp)[0].flatten()
         pointwise_v = np.mean(pointwise_v.reshape(-1,reshape_dim),axis = 1)
-
         return pointwise_v
     
     def solve(self):
@@ -156,13 +155,12 @@ class runRMC():
 
             if iStep!=1:
                 X_prev,I_next = design_generator(self.nsim,self.X_lowers[iStep-2],self.X_uppers[iStep-2],self.Ilb,self.Iub).create_samples
-                print(X_prev.shape)
+                
                 X_next = self.process.onestepsimulate(self.nsim,X_prev,self.process.drift_p1[iStep-2],self.process.drift_p2[iStep-2],\
                                                 self.process.diffusion_p1[iStep-2],self.process.diffusion_p2[iStep-2],iStep-2)
 
                 self.policies[iStep-1] = self.train_policy(X_next,I_next,self.values[iStep-1],self.targets[iStep-1],self.lower_targets[iStep-1],self.upper_targets[iStep-1])
 
-        
                 pointwise_values = self.v_evaluation(X_prev,self.process.drift_p1[iStep-2],self.process.drift_p2[iStep-2],\
                                              self.process.diffusion_p1[iStep-2],self.process.diffusion_p2[iStep-2],\
                                              I_next,self.policies[iStep-1],self.values[iStep-1],\
@@ -206,8 +204,8 @@ class runRMC():
             B = np.maximum(LB,np.minimum(B,UB))
 
             B_vec[i] = B
+            total_cost = total_cost+ self.running_cost.cost(B,cur_X,cur_I,self.targets[i],self.lower_targets[i],self.upper_targets[i])* self.dt
             cur_I = cur_I + B * ( (B>0) * self.charging_eff + (B<0) *1/self.charging_eff) * self.dt
-            total_cost = total_cost+ self.running_cost.cost(B,cur_X,self.targets[i],self.lower_targets[i],self.upper_targets[i])* self.dt
             I_vec[i+1]=cur_I
         total_cost += self.final_cost.cost(I_vec[-1])
         return X_vec,I_vec,B_vec,total_cost
@@ -243,10 +241,9 @@ class runRMC():
             #Bts[neg_outputs,i]= np.maximum(Bts[neg_outputs,i],lower_charging_bound)
             Bts[:,i] = np.maximum(LB,np.minimum(Bts[:,i],UB))
             Is[:,i+1] = Is[:,i]+Bts[:,i]*(self.charging_eff*(Bts[:,i]>0) +1/self.charging_eff *(Bts[:,i]<0))*self.dt
-            running_cost[:,i] = self.running_cost.cost(Bts[:,i],X_sims[:,i],self.targets[i],self.lower_targets[i],self.upper_targets[i])* self.dt
+            running_cost[:,i] = self.running_cost.cost(Bts[:,i],X_sims[:,i],Is[:,i],self.targets[i],self.lower_targets[i],self.upper_targets[i])* self.dt
         total_cost = np.sum(running_cost,axis = 1) +self.final_cost.cost(Is[:,-1]).flatten()
         mean_total_cost = np.mean(total_cost)
-
         return X_sims,Is,Bts, mean_total_cost
 
 
