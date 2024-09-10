@@ -60,10 +60,8 @@ class Sim():
         self.Xs = np.zeros((self.nsim,self.nstep+1))
         self.Xs[:,0] = np.ones(self.nsim)* self.X0
         if not new_sim:
-
             dW = self.noises
         else:
-
             dW = np.random.normal(0,1,size = (self.nsim,self.nstep))
 
         for i in range(1,self.nstep+1):

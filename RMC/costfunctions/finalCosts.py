@@ -62,4 +62,3 @@ class quadratic_SoC_constraint():
         dg_dB = self.scale* 2* (I- self._Imax/2) * (self._charging_eff * (B>0) + 1/self._charging_eff * (B<0))
         return dg_dB
     
-

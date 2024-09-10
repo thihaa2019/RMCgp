@@ -109,7 +109,7 @@ class runRMC():
         #pos_outputs = np.where(power_outputs>0)
         # do not charge more than X-M, causing O < M , ensures B<= X-M or M<=X-B
         #upper_charging_bound  = np.maximum(X_next_rep[pos_outputs]-target,0)
-       #power_outputs[pos_outputs] = np.minimum(power_outputs[pos_outputs],upper_charging_bound)
+        #power_outputs[pos_outputs] = np.minimum(power_outputs[pos_outputs],upper_charging_bound)
 
         # according to scipy.optimize, B<0 when X<=M
         #neg_outputs = np.where(power_outputs<0)
@@ -195,10 +195,10 @@ class runRMC():
             inp_vec = np.array([cur_X,cur_I]).reshape(1,-1)
             B = self.policy_maps[i].predict(inp_vec)[0].flatten()
 
-            #if B >0:
-            #    B= np.minimum(B,cur_X-self.targets[i])
-            #if B<0:
-            #    B = np.maximum(cur_X-self.targets[i],B)
+            if B >0:
+                B= np.minimum(B,cur_X-self.targets[i])
+            if B<0:
+                B = np.maximum(cur_X-self.targets[i],B)
             LB = np.maximum(self.Bmin,self.charging_eff*(self.Ilb- cur_I)/self.dt)
             UB = np.minimum(self.Bmax,(self.Iub-cur_I)/(self.charging_eff*self.dt))
             B = np.maximum(LB,np.minimum(B,UB))
@@ -210,7 +210,7 @@ class runRMC():
         total_cost += self.final_cost.cost(I_vec[-1])
         return X_vec,I_vec,B_vec,total_cost
 
-    def monteCarlo_GPcontrol(self,X0,I0,N_MC,init_sigma = None, randomize = False,new_sim =False):
+    def monteCarlo_GPcontrol(self,X0,I0,N_MC,init_sigma = None, randomize = False,new_sim =False,constraint = False):
         if randomize:
             assert init_sigma>0, "Sigma must be positive"
             X_init = np.minimum(np.random.normal(X0,init_sigma,size = (N_MC) ),self.process.UB)
@@ -228,17 +228,18 @@ class runRMC():
             UB = np.minimum(self.Bmax,(self.Iub-Is[:,i])/(self.charging_eff*self.dt))
             inp = np.column_stack((X_sims[:,i],Is[:,i]))
             Bts[:,i] = self.policy_maps[i].predict(inp)[0].flatten()
-            # according to scipy.optimize, B>0 when X>=M
-            #pos_outputs = np.where(Bts[:,i] >0)
-            # do not charge more than X-M, causing O < M , ensures B<= X-M or M<=X-B
-            #upper_charging_bound  = np.maximum(X_sims[pos_outputs,i]-self.targets[i],0)
-            #Bts[pos_outputs,i] = np.minimum(Bts[pos_outputs,i],upper_charging_bound)
+            if constraint:
+                # according to scipy.optimize, B>0 when X>=M
+                pos_outputs = np.where(Bts[:,i] >0)
+                # do not charge more than X-M, causing O < M , ensures B<= X-M or M<=X-B
+                upper_charging_bound  = np.maximum(X_sims[pos_outputs,i]-self.targets[i],0)
+                Bts[pos_outputs,i] = np.minimum(Bts[pos_outputs,i],upper_charging_bound)
 
-            # according to scipy.optimize, B<0 when X<=M
-            #neg_outputs = np.where(Bts[:,i] <0)
-            # do not discharge more than X-M, causing O > M , ensures B>= X-M or M>=X-B
-            #lower_charging_bound  = np.minimum(X_sims[neg_outputs,i]-self.targets[i],0)
-            #Bts[neg_outputs,i]= np.maximum(Bts[neg_outputs,i],lower_charging_bound)
+                # according to scipy.optimize, B<0 when X<=M
+                neg_outputs = np.where(Bts[:,i] <0)
+                # do not discharge more than X-M, causing O > M , ensures B>= X-M or M>=X-B
+                lower_charging_bound  = np.minimum(X_sims[neg_outputs,i]-self.targets[i],0)
+                Bts[neg_outputs,i]= np.maximum(Bts[neg_outputs,i],lower_charging_bound)
             Bts[:,i] = np.maximum(LB,np.minimum(Bts[:,i],UB))
             Is[:,i+1] = Is[:,i]+Bts[:,i]*(self.charging_eff*(Bts[:,i]>0) +1/self.charging_eff *(Bts[:,i]<0))*self.dt
             running_cost[:,i] = self.running_cost.cost(Bts[:,i],X_sims[:,i],Is[:,i],self.targets[i],self.lower_targets[i],self.upper_targets[i])* self.dt

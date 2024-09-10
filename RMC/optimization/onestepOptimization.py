@@ -1,8 +1,10 @@
 import sys
 from ..costfunctions.finalCosts import final_SOCcontraint,quadratic_SoC_constraint
+
 import scipy
 import GPy
 import numpy as np
+from scipy.optimize import Bounds
 
 class onestepOptimizer():
 
@@ -39,10 +41,13 @@ class onestepOptimizer():
         return cost_derivative
 
     def optimize(self,X,I,q,*remainingargs):
-        target = remainingargs[0]
-        starter = X- target
-        # excess gen imply charge only >0
-
+        target,_, upper_target = remainingargs
+        #if isinstance(self.running_cost,firming_L2) or upper_target == None:
+            #upper_constraint = None
+        #else:
+            #upper_constraint = Bounds(lb = -np.inf,ub = upper_target )
+        starter = (X- target ) + np.random.normal(0,0.001,1)
+        upper_constraint = None
         opt_B = scipy.optimize.minimize(self.cost_togo, jac= self.cost_togo_derivative,x0=starter, \
-                                       args=(X,I,q,*remainingargs),method = "L-BFGS-B",bounds=None)
+                                       args=(X,I,q,*remainingargs),method = "L-BFGS-B",bounds=upper_constraint)
         return opt_B.x[0]
