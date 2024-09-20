@@ -1,7 +1,7 @@
 <h1 align='center'> An RMC library for renewable stochastic control problems 
 
 
----
+### Introduction 
 
 Building on the well-understood mathematical theory of _stochstic optimal control_, we solve renewable energy control problems using RMC that involves:
 + Dynamic Programming
