@@ -1,9 +1,6 @@
 <h1 align='center'> An RMC library for renewable stochastic control problems 
     [<a href="https://arxiv.org/">arXiv</a>] </h1>
 
-<p align="center">
-<img align="middle" src="./imgs/L1vL2trajectory.png" width="666" />
-</p>
 
 Building on the well-understood mathematical theory of _stochstic optimal control_, we solve renewable energy control problems using RMC that involves:
 + Dynamic Programming
@@ -56,9 +53,6 @@ hybrid_solution = RMC.model.HybridControl(600,process,running_cost,final_cost,pa
 hybrid_solution.solve()
 ```
 
-<p align="center">
-<img align="middle" src="./imgs/HybridScheme.png" width="666" />
-</p>
 
 ### Reproducing experiments
 
