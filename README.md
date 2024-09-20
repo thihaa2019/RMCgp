@@ -1,5 +1,4 @@
 <h1 align='center'> An RMC library for renewable stochastic control problems 
-    [<a href="https://arxiv.org/">arXiv</a>] </h1>
 
 
 Building on the well-understood mathematical theory of _stochstic optimal control_, we solve renewable energy control problems using RMC that involves:
